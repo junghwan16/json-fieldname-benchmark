@@ -1,0 +1,94 @@
+name: CI
+
+# 언제 워크플로우를 실행할지
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # 1) 코드 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2) Go 환경 설정
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+
+      # 3) 의존성 설치
+      - name: Install dependencies
+        run: go mod tidy
+
+      # 4) 린터 실행 (golangci-lint)
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: "v1.53.0"
+          args: >
+            run
+            --timeout=5m
+            --disable-all
+            --enable=govet
+            --enable=golint
+            --enable=ineffassign
+            --enable=staticcheck
+
+      # 5) 유닛 테스트 실행 및 커버리지 수집
+      - name: Run tests
+        run: |
+          go test ./... -v -coverprofile=coverage.out
+
+      # 6) 커버리지 업로드 (Optional: Codecov)
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.out
+
+  benchmark:
+    name: Benchmark HTTP Endpoints
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+
+      - name: Build server binary
+        run: go build -o json-benchmark .
+
+      # 1) 서버 백그라운드로 실행
+      - name: Start HTTP server
+        run: |
+          nohup ./json-benchmark &
+          sleep 3   # 서버가 완전히 뜰 때까지 대기
+
+      # 2) wrk 설치
+      - name: Install wrk
+        run: sudo apt-get update && sudo apt-get install -y wrk
+
+      # 3) 벤치마크 실행
+      - name: Run HTTP benchmark
+        run: bash benchmark/run_http.sh | tee benchmark/results_http.txt
+
+      # 4) 벤치마크 결과 업로드 (아티팩트)
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@v3
+        with:
+          name: http-benchmark-results
+          path: benchmark/results_http.txt
