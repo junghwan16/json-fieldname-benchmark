@@ -78,4 +78,29 @@ json-fieldname-benchmark/
 ## Results
 
 - JSON Short vs Long: Payload 크기, 평균 레이턴시 비교
+
+  - wrk 잘만들었네..
+
+  ```
+  === HTTP JSON short keys ===
+  Running 30s test @ http://localhost:8080/short
+  4 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+     Latency     2.02ms    2.07ms  31.49ms   87.01%
+     Req/Sec    14.68k     1.92k   22.80k    70.42%
+  1756774 requests in 30.09s, 236.23MB read
+  Requests/sec:  58385.60
+  Transfer/sec:      7.85MB
+
+  === HTTP JSON long keys ===
+  Running 30s test @ http://localhost:8080/long
+  4 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+     Latency     1.92ms    2.00ms  26.82ms   87.28%
+     Req/Sec    15.44k     2.01k   22.37k    68.25%
+  1848642 requests in 30.09s, 393.15MB read
+  Requests/sec:  61433.06
+  Transfer/sec:     13.06MB
+  ```
+
 - JSON vs gRPC: 바이너리 직렬화＋압축 효과
